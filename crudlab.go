@@ -1,16 +1,15 @@
 package crudlab
 
 import (
-	"fmt"
-	// "log"
-	"net/http"
 	"net/http/httptest"
-	"net/url"
-	"io"
 	"encoding/json"
+	"encoding/xml"
 	"io/ioutil"
-	//"regexp"
+	"net/http"
+	"net/url"
 	"bytes"
+	"fmt"
+	"io"
 )
 
 type LabRoom struct {
@@ -76,5 +75,15 @@ func ( t CRUDTest) AddJSONBody( obj interface{} ) CRUDTest {
 		t.Header = make(http.Header)
 	}
 	t.Header.Add("Content-Type","application/json")
+	return t
+}
+
+func ( t CRUDTest) AddXMLBody( obj interface{} ) CRUDTest {
+	b, _ := xml.Marshal(obj)
+	t.Body = ioutil.NopCloser(bytes.NewReader(b))
+	if t.Header == nil {
+		t.Header = make(http.Header)
+	}
+	t.Header.Add("Content-Type","application/xml")
 	return t
 }
