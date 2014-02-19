@@ -6,8 +6,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	// "io"
+	"io"
+	"encoding/json"
+	"io/ioutil"
 	//"regexp"
+	"bytes"
 )
 
 type LabRoom struct {
@@ -22,6 +25,7 @@ type CRUDTest struct {
 	Method          string
 	ValidStatus     int
 	Header          http.Header
+	Body            io.ReadCloser
 	BodyValidator   func([]byte) error
 	HeaderValidator func(http.Header) error
 }
@@ -33,10 +37,13 @@ func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error
 			Method: test.Method,
 			URL:    test.Resource,
 			Header: test.Header,
+			Body: test.Body,
 		}
+		fmt.Printf("Running method %s on resource %s\n", req.Method, req.URL)
 		h(rec, req)
 		if rec.Code != test.ValidStatus {
-			return fmt.Errorf("Run method %s on resource %s: expected %d but got %d", req.Method, req.URL, test.ValidStatus, rec.Code)
+			return fmt.Errorf("Run method %s on resource %s: expected %d but got %d.\n Request Object: %q\n Response: %q\n", 
+				req.Method, req.URL, test.ValidStatus, rec.Code, req, rec)
 		}
 		var err error
 
@@ -60,4 +67,14 @@ func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error
 
 	}
 	return nil
+}
+
+func ( t CRUDTest) AddJSONBody( obj interface{} ) CRUDTest {
+	b, _ := json.Marshal(obj)
+	t.Body = ioutil.NopCloser(bytes.NewReader(b))
+	if t.Header == nil {
+		t.Header = make(http.Header)
+	}
+	t.Header.Add("Content-Type","application/json")
+	return t
 }
