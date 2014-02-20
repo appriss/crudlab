@@ -23,10 +23,65 @@ type CRUDTest struct {
 	Resource        *url.URL
 	Method          string
 	ValidStatus     int
-	Header          http.Header
+	Header          *RequestHeader
+	ContentType 	string
 	Body            io.ReadCloser
-	BodyValidator   func([]byte) error
+	BodyValidator   func(content_type string, body []byte) error
 	HeaderValidator func(http.Header) error
+}
+
+func (t CRUDTest) AddObjToBody(obj interface{}) CRUDTest {
+	switch t.Header.M.Get("Content-Type") {
+	case "application/json":
+		b, _ := json.Marshal(obj)
+		t.Body = ioutil.NopCloser(bytes.NewReader(b))
+	case "application/xml":
+		b, _ := xml.Marshal(obj)
+		t.Body = ioutil.NopCloser(bytes.NewReader(b))
+	default:
+		fmt.Println("Debug, serializing could not determine content-type")
+	}
+	return t
+}
+
+type RequestHeader struct {
+	M 	http.Header
+}
+
+func (h *RequestHeader) AddHeader(key, value string) *RequestHeader {
+	h.M.Add(key, value)
+	return h
+}
+
+func NewHeader() *RequestHeader {
+	rq := &RequestHeader{}
+	rq.M = make(http.Header)
+	return rq
+}
+
+func ParseResponseBody(content_type string, body []byte, v interface{}) error {
+	fmt.Println("DEBUG: Parsing the response body")
+	fmt.Printf("DEBUG RAW BODY: %s\n", body)
+	switch content_type {
+	case "application/json":
+		fmt.Println("DEBUG: Parsing the response body JSON")
+		if err := json.Unmarshal(body, &v); err != nil {
+			fmt.Println("Error unserializing json")
+			return err
+		}
+	case "application/xml":
+		fmt.Println("DEBUG: Parsing the response body XML")
+		if err := xml.Unmarshal(body, &v); err != nil {
+			fmt.Println("Error unserializing xml")
+			return err
+		}
+	default:
+		return fmt.Errorf("Content type is not recognized, %s", content_type)
+	}
+	
+	fmt.Printf("DEBUG PARSED BODY: %v\n", v)
+
+	return nil
 }
 
 func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error {
@@ -35,9 +90,10 @@ func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error
 		req := &http.Request{
 			Method: test.Method,
 			URL:    test.Resource,
-			Header: test.Header,
+			Header: test.Header.M,
 			Body: test.Body,
 		}
+
 		fmt.Printf("Running method %s on resource %s\n", req.Method, req.URL)
 		h(rec, req)
 		if rec.Code != test.ValidStatus {
@@ -54,7 +110,7 @@ func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error
 			},
 			func() {
 				if test.BodyValidator != nil {
-					err = test.BodyValidator(rec.Body.Bytes())
+					err = test.BodyValidator(test.Header.M.Get("Content-Type"), rec.Body.Bytes())
 				}
 			},
 		} {
@@ -63,27 +119,6 @@ func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error
 				return err
 			}
 		}
-
 	}
 	return nil
-}
-
-func ( t CRUDTest) AddJSONBody( obj interface{} ) CRUDTest {
-	b, _ := json.Marshal(obj)
-	t.Body = ioutil.NopCloser(bytes.NewReader(b))
-	if t.Header == nil {
-		t.Header = make(http.Header)
-	}
-	t.Header.Add("Content-Type","application/json")
-	return t
-}
-
-func ( t CRUDTest) AddXMLBody( obj interface{} ) CRUDTest {
-	b, _ := xml.Marshal(obj)
-	t.Body = ioutil.NopCloser(bytes.NewReader(b))
-	if t.Header == nil {
-		t.Header = make(http.Header)
-	}
-	t.Header.Add("Content-Type","application/xml")
-	return t
 }
