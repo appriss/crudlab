@@ -60,26 +60,20 @@ func NewHeader() *RequestHeader {
 }
 
 func ParseResponseBody(content_type string, body []byte, v interface{}) error {
-	fmt.Println("DEBUG: Parsing the response body")
-	fmt.Printf("DEBUG RAW BODY: %s\n", body)
 	switch content_type {
 	case "application/json":
-		fmt.Println("DEBUG: Parsing the response body JSON")
-		if err := json.Unmarshal(body, &v); err != nil {
+		if err := json.Unmarshal(body, v); err != nil {
 			fmt.Println("Error unserializing json")
 			return err
 		}
 	case "application/xml":
-		fmt.Println("DEBUG: Parsing the response body XML")
-		if err := xml.Unmarshal(body, &v); err != nil {
+		if err := xml.Unmarshal(body, v); err != nil {
 			fmt.Println("Error unserializing xml")
 			return err
 		}
 	default:
 		return fmt.Errorf("Content type is not recognized, %s", content_type)
 	}
-	
-	fmt.Printf("DEBUG PARSED BODY: %v\n", v)
 
 	return nil
 }
