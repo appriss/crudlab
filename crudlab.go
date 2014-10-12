@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 )
 
 type LabRoom struct {
@@ -81,6 +82,9 @@ func ParseResponseBody(content_type string, body []byte, v interface{}) error {
 func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error {
 	for _, test := range t {
 		rec := httptest.NewRecorder()
+		if test.Header == nil {
+			test.Header = NewHeader()
+		}
 		req := &http.Request{
 			Method: test.Method,
 			URL:    test.Resource,
@@ -115,4 +119,24 @@ func HandlerTest(t []CRUDTest, h func(http.ResponseWriter, *http.Request)) error
 		}
 	}
 	return nil
+}
+
+func VerifyHTTPMethods(methods []string, s string) bool {
+	m := strings.Split(s, ",")
+	for i,v := range m {
+		m[i] = strings.TrimSpace(v)
+	}
+	for _,v := range methods {
+		found := false
+		for _, vv := range m {
+			if vv == v {
+				found = true 
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}	
+	return true
 }

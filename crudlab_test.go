@@ -14,11 +14,11 @@ func badHandler(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "This request failed!", http.StatusInternalServerError)
 }
 
-func goodBodyValidator([]byte) error {
+func goodBodyValidator( string, []byte) error {
 	return nil
 }
 
-func badBodyValidator( []byte ) error {
+func badBodyValidator( string, []byte ) error {
 	return errors.New("Body Validation Failed")
 }
 
@@ -86,5 +86,17 @@ func TestHeaderValidationFailed(t *testing.T) {
 	err := HandlerTest(mlist, goodHandler)
 	if err == nil {
 		t.Error(err.Error())
+	}
+}
+
+func TestVerifyHTTPMethods(t *testing.T) {
+	s := "OPTIONS, GET , DELETE"
+	m := []string{"GET","DELETE","OPTIONS"}
+	if !VerifyHTTPMethods(m,s) {
+		t.Error("Could not successfully validate list.")
+	}
+	m = []string{"PUT","PATCH","GET"}
+	if VerifyHTTPMethods(m,s) {
+		t.Error("Could not fail to validate list.")
 	}
 }
